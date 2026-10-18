@@ -12,6 +12,8 @@ import android.net.Uri;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -68,6 +70,30 @@ public class VideoActivity extends GvrActivity implements
 
     private long lastEventTime = 0;
     private boolean resetRotationMatrix = false;
+
+    private static final int RECENTER_DELAY_SECONDS = 3;
+    private int recenterCountdown = 0;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private final Runnable recenterTick = new Runnable() {
+        @Override
+        public void run() {
+            recenterCountdown -= 1;
+            if (recenterCountdown > 0) {
+                state.message = "Move head to a comfortable position, recentering in "
+                        + recenterCountdown;
+                handler.postDelayed(this, 1000);
+                return;
+            }
+            resetRotationMatrix = true;
+            state.message = "Recentered";
+            handler.postDelayed(() -> {
+                if ("Recentered".equals(state.message)) {
+                    state.message = null;
+                }
+            }, 2000);
+        }
+    };
     private boolean lastUiVisible = false;
     private final float[] latestHeadView = new float[16];
 
@@ -123,7 +149,11 @@ public class VideoActivity extends GvrActivity implements
         if (!state.videoLoaded || !state.videoType.isVR()) {
             return false;
         }
-        resetRotationMatrix = true;
+        recenterCountdown = RECENTER_DELAY_SECONDS;
+        handler.removeCallbacks(recenterTick);
+        state.message = "Move head to a comfortable position, recentering in "
+                + recenterCountdown;
+        handler.postDelayed(recenterTick, 1000);
         return true;
     }
 
@@ -251,6 +281,8 @@ public class VideoActivity extends GvrActivity implements
 
         stopProximityWatch();
         pausedByProximity = false;
+        handler.removeCallbacks(recenterTick);
+        recenterCountdown = 0;
         if (videoRenderer != null) {
             videoRenderer.pause();
             videoRenderer.savePosition();
