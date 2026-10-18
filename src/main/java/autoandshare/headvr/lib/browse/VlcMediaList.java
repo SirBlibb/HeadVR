@@ -12,7 +12,11 @@ import org.videolan.medialibrary.interfaces.media.MediaWrapper;
 import org.videolan.resources.VLCInstance;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 import autoandshare.headvr.BuildConfig;
 import autoandshare.headvr.activity.VlcHelper;
@@ -76,15 +80,43 @@ public class VlcMediaList implements PlayList.ListSource {
                     expand(sub_m, list);
                 } else {
                     MediaWrapper mw = MLServiceLocator.getAbstractMediaWrapper(sub_m);
-                    if (mw != null) {
-                        if ((mw.getType() == MediaWrapper.TYPE_VIDEO) || mw.getUri().getScheme().startsWith("http")) {
-                            list.add(mw);
-                        }
+                    if (mw != null && isVideoLike(mw)) {
+                        list.add(mw);
                     }
                 }
                 sub_m.release();
             }
             ml.release();
         }
+    }
+
+    private static final Set<String> EXTRA_VIDEO_EXTENSIONS = new HashSet<>(Arrays.asList(
+            ".mk3d", ".264", ".h264", ".265", ".h265", ".hevc", ".avc", ".m3u8"));
+
+    private static boolean isVideoLike(MediaWrapper mw) {
+        if (mw.getType() == MediaWrapper.TYPE_VIDEO) {
+            return true;
+        }
+
+        String scheme = mw.getUri().getScheme();
+        if (scheme != null && scheme.startsWith("http")) {
+            return true;
+        }
+
+        String fileName = mw.getFileName();
+        if (fileName == null) {
+            fileName = mw.getUri().getLastPathSegment();
+        }
+        if (fileName == null) {
+            return false;
+        }
+
+        fileName = fileName.toLowerCase(Locale.ENGLISH);
+        for (String extension : EXTRA_VIDEO_EXTENSIONS) {
+            if (fileName.endsWith(extension)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -28,6 +28,8 @@ public class VRTexture2D extends ContentForTwoEyes {
     }
 
     public boolean verticalFixed = false;
+    public boolean worldAnchored = false;
+    public float[] worldRecenter = null;
 
     // constructors
     public VRTexture2D() {
@@ -174,6 +176,19 @@ public class VRTexture2D extends ContentForTwoEyes {
 
     private float[] getMVP(Eye eye) {
 
+        float[] perspective = eye.getPerspective(Z_NEAR, Z_FAR);
+        float[] videoMVP = new float[16];
+
+        if (worldAnchored) {
+            float[] eyeView = eye.getEyeView();
+            if (worldRecenter != null) {
+                eyeView = new float[16];
+                Matrix.multiplyMM(eyeView, 0, eye.getEyeView(), 0, worldRecenter, 0);
+            }
+            Matrix.multiplyMM(videoMVP, 0, perspective, 0, eyeView, 0);
+            return videoMVP;
+        }
+
         // use different distance for mono and stereo content
         float eyeDistance = getEyeDistance();
 
@@ -189,9 +204,6 @@ public class VRTexture2D extends ContentForTwoEyes {
         Matrix.setLookAtM(camera, 0, 0.0f, 0.0f, CAMERA_Z, 0.0f, 0.0f, -3f, 0.0f, 1.0f, 0.0f);
 
         // Build the ModelView and ModelViewProjection matrices
-        float[] perspective = eye.getPerspective(Z_NEAR, Z_FAR);
-
-        float[] videoMVP = new float[16];
         Matrix.multiplyMM(videoMVP, 0, camera, 0, mvp, 0);
         Matrix.multiplyMM(videoMVP, 0, perspective, 0, videoMVP, 0);
 

@@ -18,38 +18,75 @@
         android:layout_gravity="center"
         android:text="Selected online videos. Relax and enjoy!" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:background="@color/black"
-        android:layout_margin="20dp" />
-
-    <EditText
-        android:id="@+id/streamUrl"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:maxLines="2"
-        android:hint="https://..."
-        />
-
     <LinearLayout
+        android:id="@+id/urlSection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="end">
+        android:layout_margin="12dp"
+        android:background="@drawable/section_background"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stream URL"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/streamUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:hint="https://..." />
+
+        <TextView
+            android:id="@+id/urlStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="6dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/buttonPlayStream"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="end"
             android:text="Play" />
 
     </LinearLayout>
 
-    <Button
-        android:id="@+id/clearUrlList"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Clear History" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="History"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/clearUrlList"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clear History" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/streamListEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="20dp"
+        android:text="No history yet. URLs you play appear here." />
 
     <ListView
         android:id="@+id/streamUrlList"

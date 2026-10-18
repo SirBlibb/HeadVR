@@ -56,11 +56,13 @@ public class Mesh extends ContentForTwoEyes {
                     "attribute vec4 aPosition;",
                     "attribute vec2 aTexCoords;",
                     "varying vec2 vTexCoords;",
+                    "varying vec3 vPosition;",
 
                     // Standard transformation.
                     "void main() {",
                     "  gl_Position = uMvpMatrix * aPosition;",
                     "  vTexCoords = aTexCoords;",
+                    "  vPosition = aPosition.xyz;",
                     "}"
             };
     private static final String[] FRAGMENT_SHADER_CODE =
@@ -69,11 +71,33 @@ public class Mesh extends ContentForTwoEyes {
                     "#extension GL_OES_EGL_image_external : require",
                     "precision mediump float;",
 
-                    // Standard texture rendering shader.
                     "uniform samplerExternalOES uTexture;",
+                    "uniform int uFisheye;",
+                    "uniform vec2 uEyeScale;",
+                    "uniform vec2 uEyeOffset;",
                     "varying vec2 vTexCoords;",
+                    "varying vec3 vPosition;",
                     "void main() {",
-                    "  gl_FragColor = texture2D(uTexture, vTexCoords);",
+                    "  vec2 uv = vTexCoords;",
+                    "  if (uFisheye > 0) {",
+                    // Reproject a 180 fisheye frame: vPosition is the direction on the sphere
+                    // in video space (forward is -z). Compute the fisheye disk coordinates.
+                    "    vec3 d = normalize(vPosition);",
+                    "    float ct = clamp(-d.z, -1.0, 1.0);",
+                    "    float theta = acos(ct);",
+                    "    float st = sqrt(max(1.0 - ct * ct, 0.0));",
+                    "    vec2 p = vec2(0.0);",
+                    "    if (st > 0.0001) {",
+                    "      p = d.xy / st;",
+                    "    }",
+                    "    float r = theta / 1.5707963;",
+                    "    if (uFisheye == 2) {",
+                    "      r = 1.4142136 * sin(theta * 0.5);",
+                    "    }",
+                    "    uv = vec2(0.5 + p.x * r * 0.5, 0.5 - p.y * r * 0.5);",
+                    "  }",
+                    "  uv = uv * uEyeScale + uEyeOffset;",
+                    "  gl_FragColor = texture2D(uTexture, uv);",
                     "}"
             };
 
@@ -100,7 +124,35 @@ public class Mesh extends ContentForTwoEyes {
     private int positionHandle;
     private int texCoordsHandle;
     private int textureHandle;
+    private int fisheyeHandle;
+    private int eyeScaleHandle;
+    private int eyeOffsetHandle;
     private int textureId = 0;
+
+    private int fisheyeMode = 0;
+    private float eyeScaleX = 1f;
+    private float eyeScaleY = 1f;
+    private float leftOffsetX = 0f;
+    private float leftOffsetY = 0f;
+    private float rightOffsetX = 0f;
+    private float rightOffsetY = 0f;
+
+    /**
+     * Configures fisheye reprojection. Mode 0 disables it and uses the mesh texture
+     * coordinates as usual. Mode 1 is equidistant fisheye, mode 2 is equisolid.
+     * The eye scale and offsets select the left/right sub-rect of the frame for
+     * stereo layouts.
+     */
+    public void setFisheye(int mode, float scaleX, float scaleY,
+                           float leftX, float leftY, float rightX, float rightY) {
+        fisheyeMode = mode;
+        eyeScaleX = scaleX;
+        eyeScaleY = scaleY;
+        leftOffsetX = leftX;
+        leftOffsetY = leftY;
+        rightOffsetX = rightX;
+        rightOffsetY = rightY;
+    }
 
     /**
      * Generates a 3D UV sphere for rendering monoscopic or stereoscopic video.
@@ -234,6 +286,9 @@ public class Mesh extends ContentForTwoEyes {
         positionHandle = GLES20.glGetAttribLocation(program, "aPosition");
         texCoordsHandle = GLES20.glGetAttribLocation(program, "aTexCoords");
         textureHandle = GLES20.glGetUniformLocation(program, "uTexture");
+        fisheyeHandle = GLES20.glGetUniformLocation(program, "uFisheye");
+        eyeScaleHandle = GLES20.glGetUniformLocation(program, "uEyeScale");
+        eyeOffsetHandle = GLES20.glGetUniformLocation(program, "uEyeOffset");
     }
 
     /**
@@ -246,6 +301,13 @@ public class Mesh extends ContentForTwoEyes {
         // Configure shader.
         GLES20.glUseProgram(program);
         checkGlError();
+
+        boolean rightTexture = useRightTexture(eyeType);
+        GLES20.glUniform1i(fisheyeHandle, fisheyeMode);
+        GLES20.glUniform2f(eyeScaleHandle, eyeScaleX, eyeScaleY);
+        GLES20.glUniform2f(eyeOffsetHandle,
+                rightTexture ? rightOffsetX : leftOffsetX,
+                rightTexture ? rightOffsetY : leftOffsetY);
 
         GLES20.glEnableVertexAttribArray(positionHandle);
         GLES20.glEnableVertexAttribArray(texCoordsHandle);
@@ -270,7 +332,7 @@ public class Mesh extends ContentForTwoEyes {
 
         // Load texture data. Eye.Type.RIGHT uses the left eye's data.
         int textureOffset =
-                useRightTexture(eyeType) ?
+                rightTexture ?
                         POSITION_COORDS_PER_VERTEX + 2 : POSITION_COORDS_PER_VERTEX;
         vertexBuffer.position(textureOffset);
         GLES20.glVertexAttribPointer(

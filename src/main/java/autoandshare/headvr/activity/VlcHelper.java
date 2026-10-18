@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 
 import androidx.core.app.ActivityCompat;
 
@@ -19,14 +20,23 @@ import autoandshare.headvr.lib.browse.HeadVRChannel;
 import autoandshare.headvr.lib.browse.PlayList;
 
 public class VlcHelper {
-    private static final String[] permissions = new String[]{
-            Manifest.permission.INTERNET,
-            Manifest.permission.READ_EXTERNAL_STORAGE};
+
+    private static String[] getPermissions() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            return new String[]{
+                    Manifest.permission.INTERNET,
+                    "android.permission.READ_MEDIA_VIDEO",
+                    "android.permission.READ_MEDIA_AUDIO"};
+        }
+        return new String[]{
+                Manifest.permission.INTERNET,
+                Manifest.permission.READ_EXTERNAL_STORAGE};
+    }
 
     // Internet and Storage Permissions
     public static void verifyPermissions(Activity activity) {
         boolean hasAllPermissions = true;
-        for (String permission : permissions) {
+        for (String permission : getPermissions()) {
             if (ActivityCompat.checkSelfPermission(activity, permission)
                     != PackageManager.PERMISSION_GRANTED) {
                 hasAllPermissions = false;
@@ -37,7 +47,7 @@ public class VlcHelper {
         if (!hasAllPermissions) {
             ActivityCompat.requestPermissions(
                     activity,
-                    permissions,
+                    getPermissions(),
                     1
             );
         }

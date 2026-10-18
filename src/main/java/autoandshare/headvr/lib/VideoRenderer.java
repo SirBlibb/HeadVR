@@ -63,6 +63,7 @@ public class VideoRenderer implements IMedia.EventListener {
         }
         mPlayer.play();
         state.playing = true;
+        applyPlaybackTuning();
     }
 
     private float newPosition(float current, float offset) {
@@ -291,6 +292,10 @@ public class VideoRenderer implements IMedia.EventListener {
         state.subtitleTracks = mPlayer.getSpuTracks();
         state.loadValues();
 
+        if (!hardwareDecodingOn) {
+            state.message = "Using software decoding";
+        }
+
         state.videoLoaded = true;
         updatePositionRequested = true;
     }
@@ -358,6 +363,8 @@ public class VideoRenderer implements IMedia.EventListener {
         updatePositionRequested = false;
         retry = 0;
         vtrack = null;
+        hardwareDecodingOn = true;
+        retriedWithSoftwareDecode = false;
         state.reset();
     }
 
@@ -388,11 +395,48 @@ public class VideoRenderer implements IMedia.EventListener {
         }
 
     }
+
+    private boolean hardwareDecodingOn = true;
+    private boolean retriedWithSoftwareDecode = false;
+
+    private void setHardwareDecoding(IMedia m) {
+        boolean softwareDecoding = !Setting.Instance.getBoolean(Setting.id.HardwareDecoding)
+                || VideoProperties.getVideoSoftwareDecoding(state.propertyKey);
+        hardwareDecodingOn = !softwareDecoding;
+        if (softwareDecoding) {
+            m.setHWDecoderEnabled(false, false);
+        } else {
+            m.setHWDecoderEnabled(true, true);
+        }
+    }
+
+    private void retryWithSoftwareDecode() {
+        if (state.videoLoaded || !hardwareDecodingOn || retriedWithSoftwareDecode) {
+            return;
+        }
+        retriedWithSoftwareDecode = true;
+        VideoProperties.setVideoSoftwareDecoding(state.propertyKey, true);
+        state.message = "Retrying with software decoding";
+        Log.d(TAG, "retrying " + state.propertyKey + " with software decoding");
+
+        final String key = state.propertyKey;
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if ((mw != null) && key.equals(state.propertyKey)) {
+                playUri(new PlayItem(mw));
+            }
+        });
+    }
+
+    private void setPlaybackOptions(IMedia m) {
+        setNetworkCaching(m);
+        setHardwareDecoding(m);
+    }
+
     private void playMedia(IMedia m) {
         VLCOptions.INSTANCE.setMediaOptions(m, activity,
                 MediaWrapper.MEDIA_VIDEO, false);
 
-        setNetworkCaching(m);
+        setPlaybackOptions(m);
 
         // disable subtitle
         m.addOption(MessageFormat.format(":sub-track-id={0}", String.valueOf(Integer.MAX_VALUE)));
@@ -417,9 +461,14 @@ public class VideoRenderer implements IMedia.EventListener {
         state.loadValues();
 
         videoScreen.setMediaType(state.mediaType);
-        mesh.setMediaType(state.videoType.type == VideoType.Type.VR180, state.mediaType);
+        boolean fisheye = state.videoType.isFisheye();
+        mesh.setMediaType((state.videoType.type == VideoType.Type.VR180) || fisheye,
+                state.mediaType);
+        setFisheyeUniforms(fisheye);
 
         setAudioAndSubtitle();
+
+        applyPlaybackTuning();
 
         if (vtrack == null) {
             vtrack = mPlayer.getCurrentVideoTrack();
@@ -439,6 +488,37 @@ public class VideoRenderer implements IMedia.EventListener {
         }
 
         updatePositionRequested = false;
+    }
+
+    private void setFisheyeUniforms(boolean fisheye) {
+        if (!fisheye) {
+            mesh.setFisheye(0, 1f, 1f, 0f, 0f, 0f, 0f);
+            return;
+        }
+        int mode = state.videoType.type == VideoType.Type.Fisheye180Equisolid ? 2 : 1;
+        float scaleX = 1f;
+        float scaleY = 1f;
+        float rightX = 0f;
+        float rightY = 0f;
+        if (state.videoType.isSBS()) {
+            scaleX = 0.5f;
+            rightX = 0.5f;
+        } else if (state.videoType.isTAB()) {
+            scaleY = 0.5f;
+            rightY = 0.5f;
+        }
+        mesh.setFisheye(mode, scaleX, scaleY, 0f, 0f, rightX, rightY);
+    }
+
+    public void applyPlaybackTuning() {
+        if ((mPlayer == null) || (state.propertyKey == null)) {
+            return;
+        }
+        // these are reset by libvlc when the media changes, so they are re-applied
+        // on load and when the activity resumes (e.g. returning from the options screen)
+        mPlayer.setRate(VideoProperties.getVideoRate(state.propertyKey) / 100f);
+        mPlayer.setAudioDelay(VideoProperties.getVideoAudioDelay(state.propertyKey) * 1000L);
+        mPlayer.setSpuDelay(VideoProperties.getVideoSpuDelay(state.propertyKey) * 1000L);
     }
 
     // guess half and full if not specified
@@ -565,7 +645,9 @@ public class VideoRenderer implements IMedia.EventListener {
                 break;
 
             case MediaPlayer.Event.Buffering:
-                state.playerState = "Buffering " + (int) event.getBuffering() + "%";
+                state.playerState = event.getBuffering() >= 100f ?
+                        "Playing" :
+                        "Buffering " + (int) event.getBuffering() + "%";
                 break;
 
             case MediaPlayer.Event.Playing:
@@ -595,6 +677,7 @@ public class VideoRenderer implements IMedia.EventListener {
 
             case MediaPlayer.Event.EncounteredError:
                 state.playerState = "Encountered error";
+                retryWithSoftwareDecode();
                 break;
 
             default:

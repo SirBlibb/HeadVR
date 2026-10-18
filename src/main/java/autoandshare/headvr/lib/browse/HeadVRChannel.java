@@ -62,7 +62,11 @@ public class HeadVRChannel implements IPlayList {
     @Override
     public PlayItem getMediaAtOffset(int offset) {
         if (list.size() == 0) {
-            list.add(getNextPlayItem());
+            PlayItem item = getNextPlayItem();
+            if (item == null) {
+                return null;
+            }
+            list.add(item);
         }
 
         int newIndex = index + offset;
@@ -72,7 +76,11 @@ public class HeadVRChannel implements IPlayList {
         }
 
         if (newIndex >= list.size()) {
-            list.add(getNextPlayItem());
+            PlayItem item = getNextPlayItem();
+            if (item == null) {
+                return null;
+            }
+            list.add(item);
             newIndex = list.size() - 1;
         }
 
@@ -81,24 +89,26 @@ public class HeadVRChannel implements IPlayList {
     }
 
     private PlayItem getNextPlayItem() {
-        PlayItem item = null;
-
         if (justStarted) {
             justStarted = false;
-
-            String lastJsonString = prefLast.getString("last", null);
-            if (lastJsonString != null) {
-                try {
-                    item = getItemFromJsonString(lastJsonString);
-                    return item;
-                }
-                catch (Exception ex) {
-                }
+            PlayItem item = getLastPlayItem();
+            if (item != null) {
+                return item;
             }
         }
+        return fetchPlayItem();
+    }
 
-        item = fetchPlayItem();
-        return item;
+    @Nullable
+    private PlayItem getLastPlayItem() {
+        String lastJsonString = prefLast.getString("last", null);
+        if (lastJsonString != null) {
+            try {
+                return getItemFromJsonString(lastJsonString);
+            } catch (Exception ex) {
+            }
+        }
+        return null;
     }
 
     private String fullUrl(String url) {
@@ -129,6 +139,10 @@ public class HeadVRChannel implements IPlayList {
             prefLast.putString("last", jsonString);
 
         } catch (Exception ex) {
+        }
+
+        if (item == null) {
+            item = getLastPlayItem();
         }
         return item;
     }

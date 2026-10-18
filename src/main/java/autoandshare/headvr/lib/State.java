@@ -4,9 +4,6 @@ import android.util.Log;
 
 import org.videolan.libvlc.MediaPlayer;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import autoandshare.headvr.lib.rendering.ContentForTwoEyes;
 import autoandshare.headvr.lib.rendering.Mesh;
 
@@ -146,36 +143,6 @@ public class State {
                 this.playing && (!this.seeking);
     }
 
-    private Pattern fileNamePattern3D =
-            Pattern.compile("([^A-Za-z0-9]|^)(half|h|full|f|)[^A-Za-z0-9]?(3d)?(sbs|ou|tab)([^A-Za-z0-9]|$)",
-                    Pattern.CASE_INSENSITIVE);
-
-    private Pattern fileNamePatternVR =
-            Pattern.compile("([^A-Za-z0-9]|^)(180|360)([^A-Za-z0-9]|$)",
-                    Pattern.CASE_INSENSITIVE);
-
-    private void getLayoutFromName(String name, VideoType videoType) {
-        if (name == null) {
-            return;
-        }
-        Matcher matcher = fileNamePattern3D.matcher(name);
-        if (matcher.find()) {
-            if (matcher.group(2).toLowerCase().startsWith("h") &&
-                    (videoType.aspect == VideoType.Aspect.Auto)) {
-                videoType.aspect = VideoType.Aspect.Half;
-            } else if (matcher.group(2).toLowerCase().startsWith("f") &&
-                    (videoType.aspect == VideoType.Aspect.Auto)) {
-                videoType.aspect = VideoType.Aspect.Full;
-            }
-            if (matcher.group(4).toLowerCase().startsWith("s")) {
-                videoType.layout = VideoType.Layout.SideBySide;
-            } else {
-                videoType.layout = VideoType.Layout.TopAndBottom;
-            }
-        }
-
-    }
-
     private int getMediaFormatFromLayout(VideoType.Layout layout) {
         switch (layout) {
             case SideBySide:
@@ -186,21 +153,10 @@ public class State {
         return Mesh.MEDIA_MONOSCOPIC;
     }
 
-    private void getVRFromName(String name, VideoType videoType) {
-        if (name == null) {
-            return;
-        }
-        Matcher matcher = fileNamePatternVR.matcher(name);
-        if (matcher.find()) {
-            videoType.type = matcher.group(2).equals("180") ?
-                    VideoType.Type.VR180 : VideoType.Type.VR360;
-        }
-    }
-
     private void getVideoLayout(String[] infos, VideoType videoType) {
         int i = 0;
         while (videoType.layout == VideoType.Layout.Auto && i < infos.length) {
-            getLayoutFromName(infos[i], videoType);
+            VideoNameParser.parseLayout(infos[i], videoType);
             i += 1;
         }
 
@@ -212,7 +168,7 @@ public class State {
     private void getVideoType(String[] infos, VideoType videoType) {
         int i = 0;
         while (videoType.type == VideoType.Type.Auto && i < infos.length) {
-            getVRFromName(infos[i], videoType);
+            VideoNameParser.parseType(infos[i], videoType);
             i += 1;
         }
 
@@ -228,7 +184,36 @@ public class State {
 
         getVideoType(new String[] {layoutInfo, fileName, title}, videoType);
 
+        if ((videoType.type == VideoType.Type.Plane)
+                && (videoType.layout == VideoType.Layout.Mono)) {
+            applyDefaultVideoLayout(videoType);
+        }
+
         Log.d(TAG, "Video Type: " + videoType);
+    }
+
+    private void applyDefaultVideoLayout(VideoType videoType) {
+        String value = setting.getString(Setting.id.DefaultVideoLayout);
+        switch (value) {
+            case "VR180_SBS":
+                videoType.type = VideoType.Type.VR180;
+                videoType.layout = VideoType.Layout.SideBySide;
+                break;
+            case "VR180_TAB":
+                videoType.type = VideoType.Type.VR180;
+                videoType.layout = VideoType.Layout.TopAndBottom;
+                break;
+            case "VR360_SBS":
+                videoType.type = VideoType.Type.VR360;
+                videoType.layout = VideoType.Layout.SideBySide;
+                break;
+            case "VR360_TAB":
+                videoType.type = VideoType.Type.VR360;
+                videoType.layout = VideoType.Layout.TopAndBottom;
+                break;
+            default:
+                break;
+        }
     }
 
     public int getSubtitle() {

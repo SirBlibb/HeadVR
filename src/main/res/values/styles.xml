@@ -8,6 +8,14 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <!-- Dark theme used by the HeadVR screens -->
+    <style name="Theme.HeadVR.Dark" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@android:color/background_dark</item>
+    </style>
+
     <style name="UiButton">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">0dp</item>

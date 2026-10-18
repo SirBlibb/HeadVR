@@ -15,6 +15,58 @@ public class VideoProperties {
     private static MMKV prefAudio = MMKV.mmkvWithID("VideoProperties-Audio");
     private static MMKV prefSubtitle = MMKV.mmkvWithID("VideoProperties-Subtitle");
     private static MMKV prefEyeDistance = MMKV.mmkvWithID("VideoProperties-EyeDistance");
+    private static MMKV prefSoftwareDecoding = MMKV.mmkvWithID("VideoProperties-SoftwareDecoding");
+    private static MMKV prefRate = MMKV.mmkvWithID("VideoProperties-Rate");
+    private static MMKV prefAudioDelay = MMKV.mmkvWithID("VideoProperties-AudioDelay");
+    private static MMKV prefSpuDelay = MMKV.mmkvWithID("VideoProperties-SpuDelay");
+
+    public static int getVideoRate(String key) {
+        return prefRate.getInt(key, 100);
+    }
+
+    public static void setVideoRate(String key, int ratePercent) {
+        if (ratePercent == 100) {
+            prefRate.remove(key);
+        } else {
+            prefRate.putInt(key, ratePercent);
+        }
+    }
+
+    public static int getVideoAudioDelay(String key) {
+        return prefAudioDelay.getInt(key, 0);
+    }
+
+    public static void setVideoAudioDelay(String key, int delayMs) {
+        if (delayMs == 0) {
+            prefAudioDelay.remove(key);
+        } else {
+            prefAudioDelay.putInt(key, delayMs);
+        }
+    }
+
+    public static int getVideoSpuDelay(String key) {
+        return prefSpuDelay.getInt(key, 0);
+    }
+
+    public static void setVideoSpuDelay(String key, int delayMs) {
+        if (delayMs == 0) {
+            prefSpuDelay.remove(key);
+        } else {
+            prefSpuDelay.putInt(key, delayMs);
+        }
+    }
+
+    public static boolean getVideoSoftwareDecoding(String key) {
+        return prefSoftwareDecoding.getBoolean(key, false);
+    }
+
+    public static void setVideoSoftwareDecoding(String key, boolean softwareDecoding) {
+        if (softwareDecoding) {
+            prefSoftwareDecoding.putBoolean(key, true);
+        } else {
+            prefSoftwareDecoding.remove(key);
+        }
+    }
 
     public static float getVideoEyeDistanceFloat(String key) {
         return Setting.Instance.getFloatValue(Setting.id.EyeDistance,

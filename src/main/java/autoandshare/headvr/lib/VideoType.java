@@ -7,17 +7,59 @@ public class VideoType {
         Plane,
         VR180,
         VR360,
+        Fisheye180,
+        Fisheye180Equisolid;
+
+        public String label() {
+            switch (this) {
+                case Plane:
+                    return "Flat (2D)";
+                case VR180:
+                    return "VR180";
+                case VR360:
+                    return "VR360";
+                case Fisheye180:
+                    return "Fisheye 180 (equidistant)";
+                case Fisheye180Equisolid:
+                    return "Fisheye 180 (equisolid)";
+            }
+            return "Auto";
+        }
     }
+
     public enum Layout {
         Auto,
         Mono,
         SideBySide,
-        TopAndBottom,
+        TopAndBottom;
+
+        public String label() {
+            switch (this) {
+                case Mono:
+                    return "Mono (2D)";
+                case SideBySide:
+                    return "Side by side";
+                case TopAndBottom:
+                    return "Top & bottom";
+            }
+            return "Auto";
+        }
     }
+
     public enum Aspect {
         Auto,
         Half,
-        Full
+        Full;
+
+        public String label() {
+            switch (this) {
+                case Half:
+                    return "Half";
+                case Full:
+                    return "Full";
+            }
+            return "Auto";
+        }
     }
 
     public Type type = Type.Auto;
@@ -41,6 +83,10 @@ public class VideoType {
     }
     public boolean isVR() {
         return type != Type.Plane;
+    }
+
+    public boolean isFisheye() {
+        return (type == Type.Fisheye180) || (type == Type.Fisheye180Equisolid);
     }
 
     @Override

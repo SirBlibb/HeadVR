@@ -192,6 +192,48 @@
             android:layout_height="wrap_content"
             android:text="Random Play" />
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_margin="10dp"
+            android:background="@android:color/darker_gray" />
+
+        <Switch
+            android:id="@+id/hardwareDecodingSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Hardware Decoding (disable if video is corrupted, applies to next video)" />
+
+        <Switch
+            android:id="@+id/pauseWhenCoveredSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Pause when headset is taken off (proximity sensor)" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_margin="10dp"
+            android:background="@android:color/darker_gray" />
+
+        <Switch
+            android:id="@+id/gazeControlSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Head cursor: look at a button and hold 2 seconds to click it" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_margin="10dp"
+            android:background="@android:color/darker_gray" />
+
+        <Button
+            android:id="@+id/buttonDefaultVideoLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Default video format: Auto (detect from file name)" />
+
         <Button
             android:id="@+id/buttonReset"
             android:layout_width="wrap_content"

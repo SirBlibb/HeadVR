@@ -1,13 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+body {
+  font-family: sans-serif;
+  margin: 16px;
+  line-height: 1.4;
+}
 table {
   border-collapse: collapse;
+  width: 100%;
 }
-tr {
-  border: solid blue 1px;
+td, th {
+  padding: 6px 8px;
+  border-bottom: 1px solid #cccccc;
+  text-align: left;
+  vertical-align: top;
 }
-
-
+td:first-child {
+  white-space: nowrap;
+}
+a {
+  text-decoration: none;
+}
+code {
+  background: #eeeeee;
+  padding: 0 4px;
+  border-radius: 3px;
+}
 </style>
+</head>
+<body>
 
 <b>HeadVR</b> (https://github.com/autoandshare/HeadVR) is an open source VR video player based on VLC.
 <br/><br/>
@@ -18,31 +42,60 @@ tr {
 <br/><br/>
 
 <a name="features"></a>
-<b><i>Features:</i></b><br/><p>
+<b><i>Features:</i></b>
 <ul>
-    <li> Support touch control, bluetooth controller, head control</li>
-    <li> Head Control may be disabled or locked</li>
-    <li> Nodding to play/pause, turning left/right to seek, ...</li>
-    <li> Go to next/prev video in a folder without taking off headset</li>
-    <li> Support Local and network (SMB, FTP, ...) resources</li>
-    <li> Rich settings (brightness, eye distance, video position ...)</li>
-    <li> Force2D mode to make some 3D video more comfortable. In this mode, same picture will be
+    <li>2D, 180 and 360 degree video, mono, side-by-side and top-bottom, including
+        fisheye 180 projections (equidistant and equisolid)</li>
+    <li>Layout auto-detected from file name tags:
+        <code>sbs</code>, <code>hsbs</code>, <code>fsbs</code>, <code>ou</code>,
+        <code>tab</code>, <code>tb</code>, <code>lr</code>, <code>180</code>,
+        <code>360</code>, <code>fisheye</code>, <code>mkx200</code>, <code>equisolid</code>
+    </li>
+    <li>Hardware decoding with automatic software fallback for files that fail to play</li>
+    <li>Touch control, bluetooth controller and head motion control</li>
+    <li>Head control may be disabled or locked</li>
+    <li>Head cursor (gaze control): a dot shows where you look; hold it on a button or
+        the progress bar for 2 seconds to click, no controller needed
+    </li>
+    <li>Recenter button on the control bar to reset the forward direction of 180/360
+        video (same as double-tapping the screen)
+    </li>
+    <li>A dedicated stream URL box and a history list with a delete button on every entry;
+        URLs are checked before the player opens
+    </li>
+    <li>Default video format setting (for example side-by-side 180) used when the file
+        name has no format tags
+    </li>
+    <li>Optionally pauses automatically when you take the headset off</li>
+    <li>Local and network (SMB, FTP, HTTP ...) resources</li>
+    <li>Curated HeadVR Channel and a stream URL history</li>
+    <li>Rich settings (brightness, eye distance, video size, video position ...)</li>
+    <li>Video Options: layout/aspect override, fisheye projection, audio track, subtitle track,
+        software decoding, playback speed, audio and subtitle delay
+    </li>
+    <li>Force2D mode to make some 3D video more comfortable. In this mode, the same picture is
         shown to both eyes.
     </li>
-    <li> Video Options (sbs/tab, full/half, audio track, subtitle ...)</li>
-    <li> Automatic selection of audio track and subtitle based on language keywords in settings</li>
+    <li>Automatic selection of audio track and subtitle based on language keywords in settings</li>
 </ul>
-</p>
 Note:<br/>
 <ul>
-    <li> Gyroscope sensor is necessary for head control</li>
-    <li> 3D/VR file name may include tags like sbs, hsbs, fsbs, ou, tab, 180, 360 to indicate its
-        format.
+    <li>Gyroscope sensor is necessary for head control</li>
+    <li>3D/VR file names may include tags like
+        <code>sbs</code>, <code>hsbs</code>, <code>fsbs</code>, <code>ou</code>,
+        <code>tab</code>, <code>tb</code>, <code>lr</code>, <code>180</code>,
+        <code>360</code>, <code>fisheye</code>, <code>mkx200</code>, <code>equisolid</code>
+        to indicate their format
     </li>
-    <li> To get good experience, be sure to adjust headset and eye distance setting so that
-        inter-lens
-        distance and video distance on the phone screen are the same as your interpupillary
-        distance.
+    <li>The Video Options screen shows the mode detected from the file name and lets you override
+        it for the current video
+    </li>
+    <li>The settings screen has a "Default video format" option used for videos whose file name
+        does not contain format tags
+    </li>
+    <li>To get a good experience, be sure to adjust the headset and the eye distance setting so
+        that the inter-lens distance and the video distance on the phone screen are the same as
+        your interpupillary distance
     </li>
 </ul>
 <br/>
@@ -51,53 +104,96 @@ Note:<br/>
 <a name="usage"></a>
 <b><i>Usage:</i></b><br/>
 <p>Touch Control:</p>
-<table cellpadding="5">
+<table>
     <tbody>
     <tr>
         <td>Play/Pause</td>
         <td>-</td>
-        <td>Touch Right 2/3 of the screen</td>
+        <td>Touch right 2/3 of the screen</td>
     </tr>
     <tr>
         <td>Forward/Rewind</td>
         <td>-</td>
-        <td>Swipe Right/Left</td>
+        <td>Swipe right/left</td>
     </tr>
     <tr>
         <td>Next/Prev Video</td>
         <td>-</td>
-        <td>Swipe Up/Down</td>
+        <td>Swipe up/down</td>
     </tr>
     <tr>
         <td>Video Options</td>
         <td>-</td>
-        <td>Touch Left 1/3 of the screen</td>
+        <td>Touch left 1/3 of the screen</td>
     </tr>
     <tr>
         <td>Recenter 360/180 Video</td>
         <td>-</td>
-        <td>Double Click screen</td>
+        <td>Double tap the screen</td>
+    </tr>
+    </tbody>
+</table>
+
+<p>Streams:</p>
+<table>
+    <tbody>
+    <tr>
+        <td>Play a saved URL</td>
+        <td>-</td>
+        <td>Tap it in the history list, or paste a URL and press Play. The URL is
+            checked first; when it is ready, press the Ready button to open the video</td>
+    </tr>
+    <tr>
+        <td>Edit / Remove</td>
+        <td>-</td>
+        <td>Press the X button on the right of a saved URL, or long-press it</td>
+    </tr>
+    </tbody>
+</table>
+
+<p>Head Cursor (Gaze Control):</p>
+<table>
+    <tbody>
+    <tr>
+        <td>Show controls</td>
+        <td>-</td>
+        <td>Look down; the control bar appears in front of you</td>
+    </tr>
+    <tr>
+        <td>Click a button</td>
+        <td>-</td>
+        <td>Hold the cursor on it for 2 seconds</td>
+    </tr>
+    <tr>
+        <td>Seek</td>
+        <td>-</td>
+        <td>Hold the cursor on the progress bar at the position you want</td>
+    </tr>
+    <tr>
+        <td>Recenter 360/180 video</td>
+        <td>-</td>
+        <td>Hold the cursor on the &#8635; button</td>
     </tr>
     </tbody>
 </table>
 
 <p>Bluetooth Controller:</p>
-<table cellpadding="5">
+<table>
     <tbody>
     <tr>
         <td>Play/Pause</td>
         <td>-</td>
-        <td>Center Key</td>
+        <td>Center key</td>
     </tr>
     <tr>
         <td>Forward/Rewind</td>
         <td>-</td>
-        <td>Right/Left Key</td>
+        <td>Right/left key</td>
     </tr>
     <tr>
         <td>Next/Prev Video</td>
         <td>-</td>
-        <td>Down/Up Key</td>
+        <td>Down/up key</td>
     </tr>
     </tbody>
 </table>
@@ -107,22 +203,22 @@ Head Control:
 <p>There are 5 basic head motions: Up, Down, Left, Right, Hold still. Each function is
     a combination of these motions.</p>
 
-<table cellpadding="5">
+<table>
     <tbody>
     <tr>
         <td>Play/Pause</td>
         <td>-</td>
-        <td>Down, Up (Nod)</td>
+        <td>Down, Up (nod)</td>
     </tr>
     <tr>
         <td>Forward</td>
         <td>-</td>
-        <td>Right, Hold still, Left (Cancel with Up/Down)</td>
+        <td>Right, Hold still, Left (cancel with Up/Down)</td>
     </tr>
     <tr>
         <td>Rewind</td>
         <td>-</td>
-        <td>Left, Hold still, Right (Cancel with Up/Down)</td>
+        <td>Left, Hold still, Right (cancel with Up/Down)</td>
     </tr>
     <tr>
         <td>Next Video</td>
@@ -153,17 +249,11 @@ Head Control:
 </table>
 <br/>
 
-
 Note:<br/>
 Seeking is only enabled for 360/180 video when it is paused.
 
 <p>&nbsp;</p>
 <p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
 
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
+</body>
+</html>

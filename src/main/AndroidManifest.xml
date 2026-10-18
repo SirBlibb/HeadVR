@@ -2,8 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="autoandshare.headvr">
 
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
     <application>
-        <activity android:name=".activity.VideoOptions"></activity>
+        <activity
+            android:name=".activity.VideoOptions"
+            android:theme="@style/Theme.HeadVR.Dark"></activity>
         <activity
             android:name=".activity.VideoActivity"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|locale"

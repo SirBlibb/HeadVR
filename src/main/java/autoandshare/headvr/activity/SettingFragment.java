@@ -14,6 +14,7 @@ import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
 import autoandshare.headvr.R;
@@ -51,6 +52,32 @@ public class SettingFragment extends Fragment implements View.OnClickListener {
         initSeekBars(view);
         initSwitchs(view);
         initLangKeywords(view);
+        initDefaultVideoLayout(view);
+    }
+
+    private void initDefaultVideoLayout(View view) {
+        Button button = view.findViewById(R.id.buttonDefaultVideoLayout);
+        updateDefaultVideoLayoutLabel(button);
+        button.setOnClickListener(v -> new AlertDialog.Builder(getContext())
+                .setTitle("Default video format (used when the file name has no tags)")
+                .setItems(Setting.defaultVideoLayoutLabels, (dialog, which) -> {
+                    setting.putString(Setting.id.DefaultVideoLayout,
+                            Setting.defaultVideoLayoutKeys[which]);
+                    updateDefaultVideoLayoutLabel(button);
+                })
+                .show());
+    }
+
+    private void updateDefaultVideoLayoutLabel(Button button) {
+        String value = setting.getString(Setting.id.DefaultVideoLayout);
+        int index = 0;
+        for (int i = 0; i < Setting.defaultVideoLayoutKeys.length; i++) {
+            if (Setting.defaultVideoLayoutKeys[i].equals(value)) {
+                index = i;
+                break;
+            }
+        }
+        button.setText("Default video format: " + Setting.defaultVideoLayoutLabels[index]);
     }
 
     private void initLangKeywords(View view) {
@@ -98,6 +125,9 @@ public class SettingFragment extends Fragment implements View.OnClickListener {
         initSwitch(view, R.id.headControlSwitch, Setting.id.HeadControl);
         initSwitch(view, R.id.landscapeSwitch, Setting.id.LandscapeNormal);
         initSwitch(view, R.id.randomPlaySwitch, Setting.id.RandomPlay);
+        initSwitch(view, R.id.hardwareDecodingSwitch, Setting.id.HardwareDecoding);
+        initSwitch(view, R.id.pauseWhenCoveredSwitch, Setting.id.PauseWhenCovered);
+        initSwitch(view, R.id.gazeControlSwitch, Setting.id.GazeControl);
     }
 
     private void initSwitch(View view, int id, Setting.id settingId) {

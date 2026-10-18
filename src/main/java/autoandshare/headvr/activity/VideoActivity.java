@@ -3,6 +3,10 @@ package autoandshare.headvr.activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.opengl.GLES20;
@@ -64,6 +68,8 @@ public class VideoActivity extends GvrActivity implements
 
     private long lastEventTime = 0;
     private boolean resetRotationMatrix = false;
+    private boolean lastUiVisible = false;
+    private final float[] latestHeadView = new float[16];
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -188,11 +194,60 @@ public class VideoActivity extends GvrActivity implements
         getWindow().setAttributes(layout);
     }
 
+    private SensorManager sensorManager;
+    private Sensor proximitySensor;
+    private boolean pausedByProximity = false;
+
+    private final SensorEventListener proximityListener = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            boolean covered = event.values[0] < event.sensor.getMaximumRange();
+            if (covered) {
+                if ((videoRenderer != null) && state.playing) {
+                    videoRenderer.pause();
+                    videoRenderer.savePosition();
+                    state.message = "Paused (headset taken off)";
+                    pausedByProximity = true;
+                }
+            } else if (pausedByProximity) {
+                pausedByProximity = false;
+                if (videoRenderer != null) {
+                    videoRenderer.pauseOrPlay();
+                }
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        }
+    };
+
+    private void startProximityWatch() {
+        if (sensorManager == null) {
+            sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        }
+        if (proximitySensor == null && sensorManager != null) {
+            proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+        }
+        if (proximitySensor != null) {
+            sensorManager.registerListener(proximityListener, proximitySensor,
+                    SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
+    private void stopProximityWatch() {
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(proximityListener);
+        }
+    }
+
     @Override
     public void onPause() {
         super.onPause();
         Log.i(TAG, "onPause()");
 
+        stopProximityWatch();
+        pausedByProximity = false;
         if (videoRenderer != null) {
             videoRenderer.pause();
             videoRenderer.savePosition();
@@ -205,6 +260,9 @@ public class VideoActivity extends GvrActivity implements
         Log.i(TAG, "onResume()");
 
         setBrightness();
+        if (setting.getBoolean(Setting.id.PauseWhenCovered)) {
+            startProximityWatch();
+        }
         if (videoRenderer != null) {
             videoRenderer.updateVideoPositionAndOthers();
         }
@@ -240,9 +298,27 @@ public class VideoActivity extends GvrActivity implements
     @Override
     public void onNewFrame(HeadTransform headTransform) {
 
+        headTransform.getHeadView(latestHeadView, 0);
+
         processHeadMotion(headTransform);
 
         handleEvents();
+
+        boolean uiVisible = isUiVisible();
+        if (uiVisible && !lastUiVisible && (basicUI != null)) {
+            basicUI.captureHome(latestHeadView);
+        }
+        lastUiVisible = uiVisible;
+
+        if ((basicUI != null) && setting.getBoolean(Setting.id.GazeControl)) {
+            int firedTarget = basicUI.updateGaze(latestHeadView, System.nanoTime());
+            if (basicUI.shouldShowUI()) {
+                showUI();
+            }
+            if (firedTarget != BasicUI.TARGET_NONE) {
+                handleGaze(firedTarget);
+            }
+        }
 
         if (resetRotationMatrix) {
             if (Mesh.recenterMatrix == null) {
@@ -266,6 +342,59 @@ public class VideoActivity extends GvrActivity implements
         }
     }
 
+    private void handleGaze(int target) {
+        switch (target) {
+            case BasicUI.TARGET_PREV:
+                appendEvent(new Event("gaze", Actions.PrevFile));
+                break;
+            case BasicUI.TARGET_REWIND:
+                seekByGaze(-1);
+                break;
+            case BasicUI.TARGET_PLAY:
+                appendEvent(new Event("gaze", Actions.PlayOrPause));
+                break;
+            case BasicUI.TARGET_FORWARD:
+                seekByGaze(1);
+                break;
+            case BasicUI.TARGET_NEXT:
+                appendEvent(new Event("gaze", Actions.NextFile));
+                break;
+            case BasicUI.TARGET_OPTIONS:
+                appendEvent(new Event("gaze", Actions.StartOptionActivity));
+                break;
+            case BasicUI.TARGET_RECENTER:
+                appendEvent(new Event("gaze", Actions.Recenter));
+                break;
+            case BasicUI.TARGET_PROGRESS:
+                seekToGaze(basicUI.getGazeProgress());
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void seekByGaze(int direction) {
+        if (!state.videoLoaded || (state.videoLength <= 0)) {
+            return;
+        }
+        int seconds = Math.min(state.videoLength / (10 * 1000), 30);
+        if (seconds == 0) {
+            seconds = 1;
+        }
+        Event e = new Event("gaze", Actions.SingleSeek);
+        e.offset = direction * seconds * 1000f / state.videoLength;
+        appendEvent(e);
+    }
+
+    private void seekToGaze(float position) {
+        if (!state.videoLoaded) {
+            return;
+        }
+        Event e = new Event("gaze", Actions.SingleSeek);
+        e.offset = position - state.currentPosition;
+        appendEvent(e);
+    }
+
     @Override
     public void onDrawEye(Eye eye) {
 
@@ -275,6 +404,11 @@ public class VideoActivity extends GvrActivity implements
         try {
             if (isUiVisible()) {
                 videoRenderer.fillStateTime();
+                float fade = 1f;
+                if (state.normalPlaying()) {
+                    fade = (9000 - (System.currentTimeMillis() - lastEventTime)) / 1000f;
+                }
+                basicUI.setFade(fade);
                 basicUI.glDraw(eye);
             }
 

@@ -34,7 +34,21 @@ public class Setting {
         SubtitleLanguageKeywords,
         LandscapeNormal,
         RandomPlay,
+        HardwareDecoding,
+        PauseWhenCovered,
+        GazeControl,
+        DefaultVideoLayout,
     }
+
+    public static final String[] defaultVideoLayoutKeys = {
+            "", "VR180_SBS", "VR180_TAB", "VR360_SBS", "VR360_TAB"};
+
+    public static final String[] defaultVideoLayoutLabels = {
+            "Auto (detect from file name)",
+            "180 - side by side (SBS)",
+            "180 - top and bottom (TAB)",
+            "360 - side by side (SBS)",
+            "360 - top and bottom (TAB)"};
 
     private static class Item {
         int min;

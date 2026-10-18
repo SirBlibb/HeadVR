@@ -30,7 +30,13 @@
                     android:id="@+id/force2DSwitch"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Force2D" />
+                    android:text="Force 2D (this video)" />
+
+                <Switch
+                    android:id="@+id/softwareDecodingSwitch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Software decoding (this video)" />
 
                 <TextView
                     android:id="@+id/textViewEyeDistance"
@@ -48,23 +54,68 @@
                     android:layout_height="wrap_content"
                     android:text="Video Mode" />
 
+                <TextView
+                    android:id="@+id/textViewDetectedMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:text="" />
+
                 <RadioGroup
                     android:id="@+id/radio_group_video_type"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"></RadioGroup>
+                    android:orientation="vertical"></RadioGroup>
 
                 <RadioGroup
                     android:id="@+id/radio_group_video_type_layout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"></RadioGroup>
+                    android:orientation="vertical"></RadioGroup>
 
                 <RadioGroup
                     android:id="@+id/radio_group_video_type_aspect"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"></RadioGroup>
+                    android:orientation="vertical"></RadioGroup>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Playback" />
+
+                <TextView
+                    android:id="@+id/textViewPlaybackSpeed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Speed" />
+
+                <SeekBar
+                    android:id="@+id/seekBarPlaybackSpeed"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:id="@+id/textViewAudioDelay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Audio delay" />
+
+                <SeekBar
+                    android:id="@+id/seekBarAudioDelay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:id="@+id/textViewSubtitleDelay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Subtitle delay" />
+
+                <SeekBar
+                    android:id="@+id/seekBarSubtitleDelay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
 
                 <TextView
                     android:layout_width="match_parent"
