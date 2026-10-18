@@ -26,6 +26,7 @@ public class VlcHelper {
             return new String[]{
                     Manifest.permission.INTERNET,
                     "android.permission.READ_MEDIA_VIDEO",
+                    "android.permission.READ_MEDIA_IMAGES",
                     "android.permission.READ_MEDIA_AUDIO"};
         }
         return new String[]{
@@ -74,7 +75,12 @@ public class VlcHelper {
 
     public static void openMedia(Context context, Intent intent) {
         Uri uri = intent.getData();
-        openUri(context, uri);
+        if (uri == null) {
+            uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        }
+        if (uri != null) {
+            openUri(context, uri);
+        }
     }
     public static void openUri(Context context, Uri uri) {
         if (uri.toString().contains("%2F")) {

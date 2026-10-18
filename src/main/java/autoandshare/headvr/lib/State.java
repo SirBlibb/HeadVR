@@ -55,6 +55,8 @@ public class State {
     //
     public int mediaType;
 
+    public boolean isStillImage;
+
     public void setForce2D(boolean force2D) {
         this.force2D = force2D;
         VideoProperties.setForce2D(propertyKey, force2D);
@@ -125,6 +127,7 @@ public class State {
 
         this.videoType = null;
         this.force2D = false;
+        this.isStillImage = false;
 
         this.playing = false;
         this.seeking = false;

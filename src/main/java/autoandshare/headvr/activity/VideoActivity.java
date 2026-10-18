@@ -104,6 +104,9 @@ public class VideoActivity extends GvrActivity implements
 
         Log.i("intent", "start");
         Uri uri = this.getIntent().getData();
+        if (uri == null) {
+            uri = this.getIntent().getParcelableExtra(Intent.EXTRA_STREAM);
+        }
         if (uri == null && playList == null) {
             finish();
             return;

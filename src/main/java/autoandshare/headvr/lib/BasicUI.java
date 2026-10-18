@@ -350,7 +350,9 @@ public class BasicUI extends VRSurface {
     private void drawTagAndTime(Canvas canvas) {
         String tag = modeTag();
         String time;
-        if (state.videoLength > 0) {
+        if (state.isStillImage) {
+            time = "Photo";
+        } else if (state.videoLength > 0) {
             time = formatTime(state.currentTime) + " / " + formatTime(state.videoLength);
         } else {
             time = "Live   " + formatTime(state.currentTime);

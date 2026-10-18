@@ -117,6 +117,6 @@ public class VlcMediaList implements PlayList.ListSource {
                 return true;
             }
         }
-        return false;
+        return PathUtil.isImageFile(fileName);
     }
 }

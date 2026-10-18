@@ -3,6 +3,7 @@
     package="autoandshare.headvr">
 
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <application>
@@ -11,8 +12,24 @@
             android:theme="@style/Theme.HeadVR.Dark"></activity>
         <activity
             android:name=".activity.VideoActivity"
+            android:exported="true"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|locale"
-            android:screenOrientation="landscape" />
+            android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".activity.DiagnosticActivity"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|locale"

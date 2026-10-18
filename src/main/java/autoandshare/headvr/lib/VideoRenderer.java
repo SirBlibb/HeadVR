@@ -321,6 +321,20 @@ public class VideoRenderer implements IMedia.EventListener {
         state.fileName = mw.getFileName();
         state.title = mw.getTitle();
 
+        state.isStillImage = PathUtil.isImageFile(
+                (state.fileName != null) && (state.fileName.length() > 0) ?
+                        state.fileName : PathUtil.getFilename(mw.getUri()));
+
+        if (!state.isStillImage && "content".equals(mw.getUri().getScheme())) {
+            try {
+                String mimeType = activity.getContentResolver().getType(mw.getUri());
+                if ((mimeType != null) && mimeType.startsWith("image/")) {
+                    state.isStillImage = true;
+                }
+            } catch (Exception e) {
+            }
+        }
+
         state.propertyKey = PathUtil.getKey(mw.getUri());
 
         if (mPlayer != null) {
@@ -437,6 +451,10 @@ public class VideoRenderer implements IMedia.EventListener {
                 MediaWrapper.MEDIA_VIDEO, false);
 
         setPlaybackOptions(m);
+
+        if (state.isStillImage) {
+            m.addOption(":image-duration=-1");
+        }
 
         // disable subtitle
         m.addOption(MessageFormat.format(":sub-track-id={0}", String.valueOf(Integer.MAX_VALUE)));
@@ -592,6 +610,12 @@ public class VideoRenderer implements IMedia.EventListener {
 
     public void fillStateTime() {
         if (state.videoLoaded) {
+            if (state.isStillImage) {
+                state.currentTime = 0;
+                state.currentPosition = 0;
+                state.videoLength = 0;
+                return;
+            }
             state.currentTime = (int) mPlayer.getTime();
             state.currentPosition = mPlayer.getPosition();
             state.videoLength = (int) mPlayer.getLength();
@@ -616,7 +640,7 @@ public class VideoRenderer implements IMedia.EventListener {
     }
 
     public void savePosition() {
-        if (state.videoLoaded) {
+        if (state.videoLoaded && !state.isStillImage) {
             Log.d(TAG, "saving position, length " + mPlayer.getLength()
             + " time " + mPlayer.getTime()
             + " position " +         mPlayer.getPosition()
@@ -693,6 +717,9 @@ public class VideoRenderer implements IMedia.EventListener {
     }
 
     private void waitAndTryPlayNext() {
+        if (state.isStillImage) {
+            return;
+        }
         if (mPlayer.getPlayerState() != Media.State.Ended) {
             Log.d(TAG, "got stop event but player state is " + mPlayer.getPlayerState());
             return;

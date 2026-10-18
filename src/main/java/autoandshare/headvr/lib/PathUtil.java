@@ -2,8 +2,29 @@ package autoandshare.headvr.lib;
 
 import android.net.Uri;
 
+import java.util.Locale;
+
 public class PathUtil {
+    private static final String[] IMAGE_EXTENSIONS = {
+            ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif"};
+
+    public static boolean isImageFile(String fileName) {
+        if (fileName == null) {
+            return false;
+        }
+        String lower = fileName.toLowerCase(Locale.ENGLISH);
+        for (String extension : IMAGE_EXTENSIONS) {
+            if (lower.endsWith(extension)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static String getFilename(String path) {
+        if (path == null) {
+            return "";
+        }
         String[] parts = path.split("/");
         if ((parts != null) && (parts.length != 0)) {
             return parts[parts.length - 1];
