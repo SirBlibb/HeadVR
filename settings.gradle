@@ -1,0 +1,10 @@
+rootProject.name = "HeadVR"
+
+include ':application'
+project(':application').projectDir = file('../vlc-android/application')
+
+include ':application:resources'
+project(':application:resources').projectDir = file('../vlc-android/application/resources')
+
+include ':application:tools'
+project(':application:tools').projectDir = file('../vlc-android/application/tools')
