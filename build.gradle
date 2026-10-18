@@ -15,7 +15,7 @@ allprojects {
         google()
         mavenCentral()
         flatDir {
-            dirs 'libs'
+            dirs project.file('libs')
         }
     }
 }
@@ -108,7 +108,7 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 
-    implementation name: 'gvr-sdk-base-1.190.0', ext: 'aar'
+    implementation files('libs/gvr-sdk-base-1.190.0.aar')
     implementation 'com.tencent:mmkv:1.2.8'
 
     api "org.videolan.android:libvlc-all:$rootProject.ext.libvlcVersion"
