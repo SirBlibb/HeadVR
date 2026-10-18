@@ -192,7 +192,7 @@ public class StreamFragment extends Fragment {
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                checkAndShowReady(listItems.get(position));
+                openVideo(listItems.get(position));
             }
         });
 
@@ -231,6 +231,7 @@ public class StreamFragment extends Fragment {
     }
 
     private void openVideo(String url) {
+        setUrlText(url);
         addOrReplace(url);
         VlcHelper.openUri(getContext(), Uri.parse(url));
     }
@@ -396,11 +397,11 @@ public class StreamFragment extends Fragment {
         final String url = listItems.get(position);
         new AlertDialog.Builder(getContext())
                 .setTitle(url)
-                .setItems(new String[]{"Play", "Edit", "Remove"}, (dialog, which) -> {
+                .setItems(new String[]{"Play now", "Check first", "Remove"}, (dialog, which) -> {
                     if (which == 0) {
-                        checkAndShowReady(url);
+                        openVideo(url);
                     } else if (which == 1) {
-                        setUrlText(url);
+                        checkAndShowReady(url);
                     } else {
                         removeUrl(url);
                     }
