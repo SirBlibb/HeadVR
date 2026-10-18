@@ -44,6 +44,8 @@ public class SettingFragment extends Fragment implements View.OnClickListener {
 
         view.findViewById(R.id.buttonVLCSettings).setOnClickListener(this);
 
+        view.findViewById(R.id.buttonAlignmentTest).setOnClickListener(this);
+
         initUI();
     }
 
@@ -192,6 +194,9 @@ public class SettingFragment extends Fragment implements View.OnClickListener {
             // reset values
             setting.clear();
             initUI();
+        }
+        if (view.getId() == R.id.buttonAlignmentTest) {
+            startActivity(new Intent(this.getContext(), DiagnosticActivity.class));
         }
         if (view.getId() == R.id.buttonVLCSettings) {
             try {

@@ -13,6 +13,10 @@
             android:name=".activity.VideoActivity"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|locale"
             android:screenOrientation="landscape" />
+        <activity
+            android:name=".activity.DiagnosticActivity"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|locale"
+            android:screenOrientation="landscape" />
     </application>
 
 </manifest>

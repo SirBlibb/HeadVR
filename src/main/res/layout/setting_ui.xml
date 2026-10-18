@@ -235,6 +235,13 @@
             android:text="Default video format: Auto (detect from file name)" />
 
         <Button
+            android:id="@+id/buttonAlignmentTest"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:text="Alignment &amp; focus test (inside the headset)" />
+
+        <Button
             android:id="@+id/buttonReset"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
