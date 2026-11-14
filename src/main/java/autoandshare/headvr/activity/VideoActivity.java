@@ -96,6 +96,9 @@ public class VideoActivity extends GvrActivity implements
     };
     private boolean lastUiVisible = false;
     private final float[] latestHeadView = new float[16];
+    private final float[] latestHeadForward = new float[3];
+    private volatile boolean uiPlacementPending = true;
+    private boolean lastVideoLoaded = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -295,6 +298,7 @@ public class VideoActivity extends GvrActivity implements
         Log.i(TAG, "onResume()");
 
         setBrightness();
+        uiPlacementPending = true;
         if (setting.getBoolean(Setting.id.PauseWhenCovered)) {
             startProximityWatch();
         }
@@ -334,34 +338,51 @@ public class VideoActivity extends GvrActivity implements
     public void onNewFrame(HeadTransform headTransform) {
 
         headTransform.getHeadView(latestHeadView, 0);
+        headTransform.getForwardVector(latestHeadForward, 0);
 
         processHeadMotion(headTransform);
 
         handleEvents();
 
+        if (resetRotationMatrix) {
+            if (Mesh.recenterMatrix == null) {
+                Mesh.recenterMatrix = new float[16];
+            }
+            Matrix.transposeM(Mesh.recenterMatrix, 0, latestHeadView, 0);
+            Mesh.recenterMatrix[3] = Mesh.recenterMatrix[7] = Mesh.recenterMatrix[11] = 0;
+            resetRotationMatrix = false;
+            uiPlacementPending = false;
+            if (basicUI != null) {
+                basicUI.placeForShow(latestHeadView, true);
+            }
+        }
+
+        if (state.videoLoaded && !lastVideoLoaded) {
+            uiPlacementPending = true;
+            showUI();
+        }
+        lastVideoLoaded = state.videoLoaded;
+
         boolean uiVisible = isUiVisible();
-        if (uiVisible && !lastUiVisible && (basicUI != null)) {
-            basicUI.captureHome(latestHeadView);
+        if (basicUI != null) {
+            if (uiPlacementPending || (uiVisible && !lastUiVisible)) {
+                basicUI.placeForShow(latestHeadView, uiPlacementPending);
+                uiPlacementPending = false;
+            } else if (!uiVisible) {
+                basicUI.keepCollapsedInView(latestHeadView);
+            }
         }
         lastUiVisible = uiVisible;
 
         if ((basicUI != null) && setting.getBoolean(Setting.id.GazeControl)) {
-            int firedTarget = basicUI.updateGaze(latestHeadView, System.nanoTime());
-            if (basicUI.shouldShowUI()) {
+            int firedTarget = basicUI.updateGaze(latestHeadView, latestHeadForward,
+                    System.nanoTime(), uiVisible);
+            if (basicUI.isGazeOnMenu()) {
                 showUI();
             }
             if (firedTarget != BasicUI.TARGET_NONE) {
                 handleGaze(firedTarget);
             }
-        }
-
-        if (resetRotationMatrix) {
-            if (Mesh.recenterMatrix == null) {
-                Mesh.recenterMatrix = new float[16];
-            }
-            Matrix.transposeM(Mesh.recenterMatrix, 0, headTransform.getHeadView(), 0);
-            Mesh.recenterMatrix[3] = Mesh.recenterMatrix[7] = Mesh.recenterMatrix[11] = 0;
-            resetRotationMatrix = false;
         }
     }
 
@@ -403,6 +424,13 @@ public class VideoActivity extends GvrActivity implements
             case BasicUI.TARGET_PROGRESS:
                 seekToGaze(basicUI.getGazeProgress());
                 break;
+            case BasicUI.TARGET_SHOW_UI:
+                showUI();
+                break;
+            case BasicUI.TARGET_SUMMON_UI:
+                basicUI.placeForShow(latestHeadView, true);
+                showUI();
+                break;
             default:
                 break;
         }
@@ -437,17 +465,26 @@ public class VideoActivity extends GvrActivity implements
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
         try {
-            if (isUiVisible()) {
+            // Draw the video first and the HUD last with depth testing off. The
+            // collapsed menu tab has transparent pixels, which must not write
+            // depth or they would hide the video behind the whole bar rectangle.
+            videoRenderer.glDraw(eye);
+
+            if ((basicUI != null) && isUiVisible()) {
                 videoRenderer.fillStateTime();
                 float fade = 1f;
-                if (state.normalPlaying()) {
+                if (state.normalPlaying() && !isBuffering()) {
                     fade = (9000 - (System.currentTimeMillis() - lastEventTime)) / 1000f;
                 }
                 basicUI.setFade(fade);
+                GLES20.glDisable(GLES20.GL_DEPTH_TEST);
                 basicUI.glDraw(eye);
+            } else if ((basicUI != null) && state.videoLoaded
+                    && (state.errorMessage == null)) {
+                GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+                basicUI.glDrawCollapsed(eye);
             }
-
-            videoRenderer.glDraw(eye);
+            GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         } catch (Exception ex) {
             Log.e(TAG, "glDraw got exception ", ex);
         }
@@ -474,14 +511,29 @@ public class VideoActivity extends GvrActivity implements
         Log.i(TAG, "width " + TouchControl.Width);
 
         basicUI = new BasicUI(state);
+        uiPlacementPending = true;
 
         videoRenderer = new VideoRenderer(this, state);
         playMediaFromList(0); // play first video
     }
 
 
+    private boolean isBuffering() {
+        return state.playerState != null && state.playerState.startsWith("Buffering");
+    }
+
     private boolean isUiVisible() {
+        if (state.errorMessage != null) {
+            return true;
+        }
         if (!state.normalPlaying()) {
+            return true;
+        }
+        if (isBuffering()) {
+            return true;
+        }
+        if ((basicUI != null) && setting.getBoolean(Setting.id.GazeControl)
+                && basicUI.isGazeOnMenu()) {
             return true;
         }
         return (System.currentTimeMillis() - lastEventTime) < 9000;

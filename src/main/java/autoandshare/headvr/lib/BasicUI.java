@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.graphics.PorterDuff;
 import android.opengl.Matrix;
 import android.text.TextPaint;
 import android.text.TextUtils;
@@ -27,10 +28,30 @@ public class BasicUI extends VRSurface {
     public static final int TARGET_OPTIONS = 5;
     public static final int TARGET_PROGRESS = 6;
     public static final int TARGET_RECENTER = 7;
+    public static final int TARGET_SHOW_UI = 8;
+    public static final int TARGET_SUMMON_UI = 9;
 
     private static final int DWELL_MS = 2000;
-    private static final long SHOW_UI_DELAY_NS = 150000000L;
+    private static final long GAZE_SHOW_DELAY_NS = 350000000L;
+    private static final long SUMMON_DELAY_NS = 300000000L;
+    // Vertical placement of the control bar relative to the view direction at the
+    // moment it is shown. Keeping this constant means the bar always pops up in the
+    // same place on screen instead of jumping around. 23 degrees puts it just below
+    // a normal 16:9 video screen, while still comfortably inside the field of view.
+    private static final float SHOW_TOP_DEGREES = 23f;
+    // Looking further down than this (while the bar is hidden) brings it back.
+    private static final float SUMMON_PITCH_DEGREES = 26f;
+    // The head has to come back above this angle before a new look-down summon can
+    // fire, so the bar does not instantly reappear while it is fading out.
+    private static final float SUMMON_REARM_PITCH_DEGREES = 12f;
+    // Keep an existing bar position while it is still comfortably in view.
+    private static final float KEEP_IN_VIEW_H_DEGREES = 45f;
+    private static final float KEEP_IN_VIEW_V_DEGREES = 38f;
     private static final float PIXELS_PER_METER = 360f;
+    private static final float HINT_CENTER_X = 460f;
+    private static final float HINT_CENTER_Y = 69f;
+    private static final float HINT_HALF_WIDTH = 42f;
+    private static final float HINT_HALF_HEIGHT = 28f;
     private static final float BUTTON_TOP = 44f;
     private static final float BUTTON_BOTTOM = 94f;
     private static final float BUTTON_HALF_WIDTH = 26f;
@@ -64,6 +85,15 @@ public class BasicUI extends VRSurface {
     private final float[] gazeInverse = new float[16];
     private final float[] gazeOrigin = new float[4];
     private final float[] gazeDirection = new float[4];
+
+    private boolean lastUiVisible = false;
+    private boolean gazeRearmed = false;
+    private boolean lookDownRearmed = false;
+    private long lookDownStartNs = 0;
+
+    private final float[] panelView = new float[16];
+    private final float[] panelPoint = new float[4];
+    private final float[] panelPointView = new float[4];
 
     private TextPaint leftAlignTextPaint;
     private Paint rightAlignTextPaint;
@@ -151,6 +181,14 @@ public class BasicUI extends VRSurface {
         activeTextPaint.setColor(Color.GREEN);
         activeTextPaint.setTextSize(textSize);
         activeTextPaint.setTextAlign(Paint.Align.CENTER);
+
+        hintBgPaint = new Paint();
+        hintBgPaint.setColor(0x99000000);
+
+        hintTextPaint = new TextPaint();
+        hintTextPaint.setColor(0xCCDDDDDD);
+        hintTextPaint.setTextSize(30);
+        hintTextPaint.setTextAlign(Paint.Align.CENTER);
     }
 
     private Paint hoverBgPaint;
@@ -159,12 +197,14 @@ public class BasicUI extends VRSurface {
     private Paint cursorPaint;
     private Paint cursorOutlinePaint;
     private TextPaint activeTextPaint;
+    private Paint hintBgPaint;
+    private TextPaint hintTextPaint;
 
     private void initSurface(float widthPixel, float heightPixel) {
         float uiWidth = widthPixel / PIXELS_PER_METER;
         float uiHeight = heightPixel / PIXELS_PER_METER;
         panelLeft = -uiWidth / 2;
-        panelTop = -1.55f;
+        panelTop = topForDegrees(SHOW_TOP_DEGREES);
         panelWidth = uiWidth;
         panelHeight = uiHeight;
         init(uiWidth, uiHeight, panelDistance,
@@ -174,39 +214,76 @@ public class BasicUI extends VRSurface {
         worldRecenter = new float[16];
     }
 
+    private float topForDegrees(float degrees) {
+        return (float) (-panelDistance * Math.tan(Math.toRadians(degrees)));
+    }
+
+    private void setPanelTopDegrees(float degrees) {
+        float newTop = topForDegrees(degrees);
+        if (Math.abs(newTop - panelTop) < 0.0001f) {
+            return;
+        }
+        panelTop = newTop;
+        updatePositions(panelWidth, panelHeight, panelDistance,
+                new PointF(panelLeft, panelTop));
+    }
+
     public void glDraw(Eye eye) {
+        drawCanvas(eye, false);
+    }
+
+    public void glDrawCollapsed(Eye eye) {
+        drawCanvas(eye, true);
+    }
+
+    private void drawCanvas(Eye eye, boolean collapsed) {
         if (eye.getType() == 1) {
             Canvas canvas = this.getCanvas();
 
-            applyFade();
-            canvas.drawColor(Color.argb((int) (255 * fade), 0, 0, 0));
-
-            drawFileNameOrMessage(canvas);
-
-            drawDatetime(canvas);
-
-            drawMotions(canvas);
-
-            if (state.errorMessage != null) {
-                drawString(canvas, "Error", beginX, row1Y, leftAlignTextPaint);
-                drawString(canvas, state.errorMessage, beginX, row2Y, leftAlignTextPaint);
-            } else if (state.videoLoaded) {
-                drawButtons(canvas);
-                drawBuffering(canvas);
-                drawTagAndTime(canvas);
-                drawProgress(canvas);
-                drawGaze(canvas);
+            if (collapsed) {
+                drawCollapsedHint(canvas);
             } else {
-                drawString(canvas,
-                        (state.playerState != null) ? state.playerState : "Loading"
-                                + (state.playing ? "" : " (Paused) "),
-                        beginX, row1Y, leftAlignTextPaint);
+                applyFade();
+                canvas.drawColor(Color.argb((int) (255 * fade), 0, 0, 0));
+
+                drawFileNameOrMessage(canvas);
+
+                drawDatetime(canvas);
+
+                drawMotions(canvas);
+
+                if (state.errorMessage != null) {
+                    drawString(canvas, "Error", beginX, row1Y, leftAlignTextPaint);
+                    drawString(canvas, state.errorMessage, beginX, row2Y, leftAlignTextPaint);
+                } else if (state.videoLoaded) {
+                    drawButtons(canvas);
+                    drawBuffering(canvas);
+                    drawTagAndTime(canvas);
+                    drawProgress(canvas);
+                    drawGaze(canvas);
+                } else {
+                    drawString(canvas,
+                            (state.playerState != null) ? state.playerState : "Loading"
+                                    + (state.playing ? "" : " (Paused) "),
+                            beginX, row1Y, leftAlignTextPaint);
+                }
             }
 
             this.releaseCanvas(canvas);
         }
         this.draw(eye);
+    }
 
+    private void drawCollapsedHint(Canvas canvas) {
+        // The collapsed bar is mostly transparent; only a small menu tab stays
+        // visible so the controls can always be found again.
+        canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+
+        float centerX = HINT_CENTER_X;
+        float centerY = HINT_CENTER_Y;
+        canvas.drawRoundRect(centerX - 34, centerY - 22,
+                centerX + 34, centerY + 22, 12, 12, hintBgPaint);
+        drawString(canvas, "\u2630", centerX, centerY, hintTextPaint);
     }
 
     private String getFileNameOrTitle() {
@@ -402,21 +479,53 @@ public class BasicUI extends VRSurface {
         cursorOutlinePaint.setAlpha(a);
     }
 
-    public void captureHome(float[] headView) {
-        Matrix.transposeM(worldRecenter, 0, headView, 0);
-        worldRecenter[3] = 0f;
-        worldRecenter[7] = 0f;
-        worldRecenter[11] = 0f;
-        gazeCaptured = true;
-        resetGaze();
+    /**
+     * Positions the control bar for the current view. The bar is only moved when
+     * it would otherwise be out of sight (or when force is set, e.g. after a
+     * recenter or a new video), so it stays put while it is being used.
+     */
+    public void placeForShow(float[] headView, boolean force) {
+        if (force || !gazeCaptured || !isPanelInView(headView)) {
+            Matrix.transposeM(worldRecenter, 0, headView, 0);
+            worldRecenter[3] = 0f;
+            worldRecenter[7] = 0f;
+            worldRecenter[11] = 0f;
+            gazeCaptured = true;
+            setPanelTopDegrees(SHOW_TOP_DEGREES);
+        }
+        resetGazeTargets();
     }
 
-    public boolean isGazeOnPanel() {
-        return gazeOnPanel;
+    /**
+     * While the bar is collapsed its small menu tab should remain reachable.
+     * If the user has turned away from it, quietly bring it back in front of
+     * them (only the tab is visible in this state).
+     */
+    public void keepCollapsedInView(float[] headView) {
+        if (!gazeCaptured || !isPanelInView(headView)) {
+            placeForShow(headView, true);
+        }
     }
 
-    public boolean shouldShowUI() {
-        return gazeOnPanel && (System.nanoTime() - gazeOnPanelSinceNs) > SHOW_UI_DELAY_NS;
+    private boolean isPanelInView(float[] headView) {
+        if (!gazeCaptured) {
+            return false;
+        }
+        Matrix.multiplyMM(panelView, 0, headView, 0, worldRecenter, 0);
+        panelPoint[0] = 0f;
+        panelPoint[1] = panelTop - panelHeight / 2f;
+        panelPoint[2] = -panelDistance;
+        panelPoint[3] = 1f;
+        Matrix.multiplyMV(panelPointView, 0, panelView, 0, panelPoint, 0);
+
+        if (panelPointView[2] >= -0.01f) {
+            return false;
+        }
+        float depth = -panelPointView[2];
+        float horizontal = Math.abs(panelPointView[0]) / depth;
+        float vertical = Math.abs(panelPointView[1]) / depth;
+        return horizontal <= Math.tan(Math.toRadians(KEEP_IN_VIEW_H_DEGREES))
+                && vertical <= Math.tan(Math.toRadians(KEEP_IN_VIEW_V_DEGREES));
     }
 
     public float getGazeProgress() {
@@ -430,14 +539,16 @@ public class BasicUI extends VRSurface {
         return position;
     }
 
-    private void resetGaze() {
-        gazeOnPanel = false;
-        gazeTarget = TARGET_NONE;
-        gazeFiredTarget = TARGET_NONE;
-        gazeDwell = 0f;
+    public boolean isGazeOnMenu() {
+        return lastUiVisible && gazeOnPanel;
     }
 
-    public int updateGaze(float[] headView, long nowNs) {
+    public int updateGaze(float[] headView, float[] headForward, long nowNs, boolean uiVisible) {
+        if (uiVisible != lastUiVisible) {
+            lastUiVisible = uiVisible;
+            resetGaze();
+        }
+
         if (!gazeCaptured || !state.videoLoaded || (state.errorMessage != null)) {
             resetGaze();
             return TARGET_NONE;
@@ -472,12 +583,18 @@ public class BasicUI extends VRSurface {
 
         int target = onPanel ? getTargetAt(canvasX, canvasY) : TARGET_NONE;
 
-        if (onPanel && !gazeOnPanel) {
-            gazeOnPanelSinceNs = nowNs;
-        }
         gazeOnPanel = onPanel;
         gazeCanvasX = canvasX;
         gazeCanvasY = canvasY;
+
+        if (!uiVisible) {
+            boolean onIcon = onPanel
+                    && (Math.abs(canvasX - HINT_CENTER_X) <= HINT_HALF_WIDTH)
+                    && (Math.abs(canvasY - HINT_CENTER_Y) <= HINT_HALF_HEIGHT);
+            gazeTarget = TARGET_NONE;
+            gazeDwell = 0f;
+            return updateCollapsed(headForward, onIcon, nowNs);
+        }
 
         if (target != gazeTarget) {
             gazeTarget = target;
@@ -504,6 +621,59 @@ public class BasicUI extends VRSurface {
             }
         }
         return fired;
+    }
+
+    private int updateCollapsed(float[] headForward, boolean onIcon, long nowNs) {
+        // A fresh look at the menu tab, or a deliberate look down, brings the
+        // full bar back. The re-arm flags stop it from instantly reappearing
+        // while the user is still looking at the place it disappeared from.
+        if (!onIcon) {
+            gazeRearmed = true;
+            gazeOnPanelSinceNs = 0;
+        } else if (gazeRearmed) {
+            if (gazeOnPanelSinceNs == 0) {
+                gazeOnPanelSinceNs = nowNs;
+            } else if (nowNs - gazeOnPanelSinceNs >= GAZE_SHOW_DELAY_NS) {
+                resetGaze();
+                return TARGET_SHOW_UI;
+            }
+        }
+
+        float forwardY = (headForward != null) ? headForward[1] : 0f;
+        boolean lookingUp = forwardY > -Math.sin(Math.toRadians(SUMMON_REARM_PITCH_DEGREES));
+        boolean lookingDown = forwardY < -Math.sin(Math.toRadians(SUMMON_PITCH_DEGREES));
+
+        if (lookingUp) {
+            lookDownRearmed = true;
+        }
+        if (lookingDown && lookDownRearmed) {
+            if (lookDownStartNs == 0) {
+                lookDownStartNs = nowNs;
+            } else if (nowNs - lookDownStartNs >= SUMMON_DELAY_NS) {
+                resetGaze();
+                return TARGET_SUMMON_UI;
+            }
+        } else {
+            lookDownStartNs = 0;
+        }
+
+        return TARGET_NONE;
+    }
+
+    private void resetGaze() {
+        resetGazeTargets();
+        gazeRearmed = false;
+        lookDownRearmed = false;
+        lookDownStartNs = 0;
+    }
+
+    private void resetGazeTargets() {
+        gazeOnPanel = false;
+        gazeTarget = TARGET_NONE;
+        gazeFiredTarget = TARGET_NONE;
+        gazeDwell = 0f;
+        gazeDwellStartNs = 0;
+        gazeOnPanelSinceNs = 0;
     }
 
     private int getTargetAt(float canvasX, float canvasY) {
