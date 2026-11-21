@@ -10,20 +10,24 @@ buildscript {
     }
 }
 
+def localMavenRepo = file('libs/maven')
+
 allprojects {
     repositories {
         google()
         mavenCentral()
-        flatDir {
-            dirs project.file('libs')
+        // Vendored GVR SDK lives in a local Maven repo so it resolves as a
+        // normal module dependency (AGP 8 rejects bare local .aar files).
+        maven {
+            url = localMavenRepo
         }
     }
 }
 
 ext {
     appId = "autoandshare.headvr"
-    versionName = '3.4.0'
-    versionCode = 3040000
+    versionName = '3.4.1'
+    versionCode = 3040100
     libvlcVersion = '3.4.0'
     medialibraryVersion = '0.9.0'
     minSdkVersion = 21
@@ -108,7 +112,7 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 
-    implementation files('libs/gvr-sdk-base-1.190.0.aar')
+    implementation 'com.google.vr:sdk-base:1.190.0'
     implementation 'com.tencent:mmkv:1.2.8'
 
     api "org.videolan.android:libvlc-all:$rootProject.ext.libvlcVersion"
